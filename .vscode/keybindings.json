@@ -1,0 +1,7 @@
+[
+    {
+        "key": "ctrl+k+c",
+        "command": "editor.action.blockComment",
+        "when": "editorTextFocus && editorLangId == c"
+    }
+]

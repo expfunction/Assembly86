@@ -1,0 +1,169 @@
+#-----DJGPP MAKEFILE-----
+MAKEFLAGS += -rR
+.SUFFIXES:
+
+CC := gcc
+LD := gcc
+AS := nasm
+
+ifdef RELEASE
+CFLAGS_OPT := -O2
+ASFLAGS_OPT := -Ox
+else
+CFLAGS_OPT := -O0 -g
+ASFLAGS_OPT ?=
+endif
+
+# Flags
+CPPFLAGS := -I. -MMD -MP
+CFLAGS   := -O2 -std=gnu90 -fno-lto -fno-strict-aliasing
+LDFLAGS  ?=
+LIBS     ?=
+
+# NASM ? 32-bit COFF for DJGPP.
+ASFLAGS  := -f coff $(ASFLAGS_OPT) -d__DJGPP__ -d__cdecl__ -i.
+
+
+# Precompiled header (use 8.3-friendly output name)
+PCH     := ./pch/pc_.h
+PCH_GCH := ./pch/pc_h.gch
+
+# Dependency flags only when enabled
+DEPFLAGS := -MMD -MP
+CPPFLAGS := -I. $(DEPFLAGS)
+CFLAGS   := $(CFLAGS) $(CFLAGS_OPT)
+LDFLAGS  := $(LDFLAGS) $(CFLAGS_OPT)
+
+# Source list (handle .c and DOS-uppercased .C; force C for .C)
+SRC_DIRS   := . ./pch
+SRCS_lc    := $(foreach dir,$(SRC_DIRS),$(wildcard $(dir)/*.c))
+SRCS_uc    := $(foreach dir,$(SRC_DIRS),$(wildcard $(dir)/*.C))
+SRCS_as_lc := $(foreach dir,$(SRC_DIRS),$(wildcard $(dir)/*.asm))
+SRCS_as_uc := $(foreach dir,$(SRC_DIRS),$(wildcard $(dir)/*.ASM))
+SRCS       := $(SRCS_lc) $(SRCS_uc) $(SRCS_as_lc) $(SRCS_as_uc)
+
+# Objects (in-place, not in obj/?)
+OBJDIR := obj
+OBJS := $(patsubst %.c,$(OBJDIR)/%.o,$(SRCS_lc))
+OBJS += $(patsubst %.C,$(OBJDIR)/%.o,$(SRCS_uc))
+OBJS += $(patsubst %.asm,$(OBJDIR)/%.o,$(SRCS_as_lc))
+OBJS += $(patsubst %.ASM,$(OBJDIR)/%.o,$(SRCS_as_uc))
+
+# Define color codes
+RED    ?=
+GREEN  ?=
+YELLOW ?=
+BLUE   ?=
+CYAN   ?=
+RESET  ?=
+
+# ---- Default -----------------------------------------------------
+DEPS := $(OBJS:.o=.d)
+TARGET := ASSM.EXE
+
+# Debug info for file lists (currently NOT WORKING)
+.PHONY: debug
+debug:
+	@echo C Sources: | tr '\n' ' ' && echo $(SRCS_lc) $(SRCS_uc) | xargs -n 10 echo
+	@echo ASM Sources: | tr '\n' ' ' && echo $(SRCS_as_lc) $(SRCS_as_uc) | xargs -n 10 echo
+	@echo Object Files: | tr '\n' ' ' && echo $(OBJS) | xargs -n 10 echo
+
+# Print config
+.PHONY: print-config
+print-config:
+	@echo $(GREEN)CyberVGA Build System
+	@echo $(GREEN)Starting build...
+	@echo Build configuration:
+	@echo Compiler: $(CC)
+	@echo Target executable: $(TARGET)
+	@echo Build mode: $(if $(RELEASE),Release,Debug-Fast)$(RESET)
+
+all: print-config $(TARGET)
+# Link
+$(TARGET): $(PCH_GCH) $(OBJS)
+	@echo $(CYAN)Linking to create $(TARGET)...$(RESET)
+	$(LD) -o $@ $(OBJS) $(LDFLAGS) $(LIBS)
+	@echo $(GREEN)Build complete: $(TARGET)$(RESET)
+
+# Assemble NASM into obj/?
+$(OBJDIR)/%.o: %.asm
+	@echo $(BLUE)Assembling $< to $@$(RESET)
+	@echo off
+	- if not exist $(OBJDIR) mkdir $(OBJDIR)
+	$(AS) $(ASFLAGS) -o $@ $<
+	@echo $(GREEN)Assembled $< to $@$(RESET)
+
+$(OBJDIR)/%.o: %.ASM
+	@echo $(BLUE)Assembling $< to $@$(RESET)
+	@echo off
+	- if not exist $(OBJDIR) mkdir $(OBJDIR)
+	$(AS) $(ASFLAGS) -o $@ $<
+	@echo $(GREEN)Assembled $< to $@$(RESET)
+
+# Build PCH explicitly (no multi-dot outputs)
+$(PCH_GCH): $(PCH)
+	@echo $(YELLOW)Building precompiled header: $@$(RESET)
+	@echo off
+	- if not exist pch mkdir pch
+	$(CC) -x c-header $(CPPFLAGS) $(CFLAGS) -o $@ $<
+	@echo $(GREEN)Precompiled header built: $@$(RESET)
+
+# Compile rules (include PCH; force C mode for .C)
+$(OBJDIR)/%.o: %.c $(PCH_GCH)
+	@echo $(YELLOW)Compiling $< to $@$(RESET)
+	@echo off
+	- if not exist obj mkdir obj
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	@echo $(GREEN)Compiled $< to $@$(RESET)
+
+$(OBJDIR)/%.o: %.C $(PCH_GCH)
+	@echo $(YELLOW)Compiling $< to $@$(RESET)
+	@echo off
+	- if not exist obj mkdir obj
+	$(CC) -x c $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	@echo $(GREEN)Compiled $< to $@$(RESET)
+
+# Final step message
+.PHONY: finish
+
+finish:
+	@echo $(GREEN)All build steps complete.$(RESET)
+
+
+# CLeanup
+.PHONY: clean
+clean:
+	@echo Cleaning up...
+	- if exist *.o        del *.o
+	- if exist *.d        del *.d
+	- if exist *.exe      del *.exe
+	- if exist obj\*.o    del obj\*.o
+	- if exist obj\*.d    del obj\*.d
+	- if exist obj\core\*.o del obj\core\*.o
+	- if exist obj\core\*.d del obj\core\*.d
+	- if exist obj\gfx\*.o del obj\gfx\*.o
+	- if exist obj\gfx\*.d del obj\gfx\*.d
+	- if exist obj\io\*.o del obj\io\*.o
+	- if exist obj\io\*.d del obj\io\*.d
+	- if exist obj\mesh\*.o del obj\mesh\*.o
+	- if exist obj\mesh\*.d del obj\mesh\*.d
+	- if exist obj\midi\*.o del obj\midi\*.o
+	- if exist obj\midi\*.d del obj\midi\*.d
+	- if exist obj\rndr\*.o del obj\rndr\*.o
+	- if exist obj\rndr\*.d del obj\rndr\*.d
+	- if exist pch\*.d    del pch\*.d
+	- if exist pch\*.gch  del pch\*.gch
+	@echo Cleanup complete.
+# ---------------------------------------------------------------
+# toggle debug/release
+# toggle with: make NODEPS=1
+ifeq ($(NODEPS),1)
+DEPFLAGS ?=
+endif
+CPPFLAGS := -I. $(DEPFLAGS)
+
+# only include deps when enabled
+ifneq ($(wildcard $(DEPS)),)
+-include $(DEPS)
+endif
+# ---------------------------------------------------------------
