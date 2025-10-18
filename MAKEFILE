@@ -59,7 +59,7 @@ RESET  ?=
 
 # ---- Default -----------------------------------------------------
 DEPS := $(OBJS:.o=.d)
-TARGET := ASSM.EXE
+TARGET := ATUT.EXE
 
 # Debug info for file lists (currently NOT WORKING)
 .PHONY: debug

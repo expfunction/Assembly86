@@ -1,14 +1,14 @@
 {
     "C_Cpp.default.cStandard": "gnu89",
-    "C_Cpp.default.compilerPath": "d:\\Program Files\\86Box\\setupprogs\\Programming\\DJGPP\\unpk\\bin",
+    "C_Cpp.default.compilerPath": "d:\\Program Files (x86)\\DJGPP\\bin\\",
     "C_Cpp.default.browse.path": [
-        "d:\\Projects\\Git\\CyberVGA"
+        "d:\\Projects\\Git\\Assembly86"
     ],
     "C_Cpp.default.includePath": [
-        "d:\\Projects\\Git\\CyberVGA"
+        "d:\\Projects\\Git\\Assembly86"
     ],
     "C_Cpp.default.systemIncludePath": [
-        "d:\\Program Files\\86Box\\setupprogs\\Programming\\DJGPP\\unpk\\include"
+        "d:\\Program Files (x86)\\DJGPP\\include"
     ],
     "editor.trimAutoWhitespace": true,
     "diffEditor.ignoreTrimWhitespace": false,
